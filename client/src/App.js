@@ -217,44 +217,138 @@
 
 // export default App;
 
-import React, { useRef, useEffect, useState } from "react";
-import { Canvas } from "@react-three/fiber";
-import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader";
-import { MeshNormalMaterial, Box3, Vector3, Plane } from "three";
-import { OrbitControls } from "@react-three/drei";
+// import React, { useRef, useEffect, useState } from "react";
+// import { Canvas } from "@react-three/fiber";
+// import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader";
+// import { MeshNormalMaterial, Box3, Vector3, Plane } from "three";
+// import { OrbitControls } from "@react-three/drei";
+// import * as THREE from "three";
+
+// function App() {
+//   const groupRef = useRef();
+//   const slicerRef = useRef();
+//   const [planeVisible, setPlaneVisible] = useState(true);
+
+//   useEffect(() => {
+//     const loader = new OBJLoader();
+//     loader.load(
+//       "http://localhost:9006/ftp/report_id--170--newfile.obj",
+//       (obj) => {
+//         obj.traverse((child) => {
+//           if (child.isMesh) {
+//             child.material = new MeshNormalMaterial(); // Assign a material to the mesh
+//           }
+//         });
+
+//         const bbox = new Box3().setFromObject(obj);
+//         const center = bbox.getCenter(new Vector3());
+//         obj.position.sub(center); // center the model
+
+//         groupRef.current.add(obj);
+//         groupRef.current.scale.set(10, 10, 10);
+
+//         // Set the position of the slicer
+//         slicerRef.current.position.x = bbox.max.x;
+
+//         // Create a clipping plane
+//         const clipPlane = new Plane(new Vector3(1, 0, 0), 0);
+//         const clipPlanes = [clipPlane];
+
+//         // Apply the clipping plane to the material of the object
+//         obj.traverse((child) => {
+//           if (child.isMesh) {
+//             child.material.clipping = true;
+//             child.material.clippingPlanes = clipPlanes;
+//             child.material.clipShadows = true;
+//           }
+//         });
+//       }
+//     );
+//   }, []);
+
+//   const togglePlane = () => {
+//     setPlaneVisible(!planeVisible);
+//   };
+
+//   return (
+//     <div style={{ position: "relative" }}>
+//       <Canvas
+//         style={{
+//           height: "100vh",
+//           width: "auto",
+//           backgroundColor: "black",
+//         }}
+//         colorManagement
+//         camera={{ position: [0, 0, 50], fov: 70 }}
+//         color="black"
+//       >
+//         <group ref={groupRef} />
+//         {planeVisible && (
+//           <mesh ref={slicerRef}>
+//             <planeBufferGeometry args={[5, 5]} />
+//             <meshBasicMaterial
+//               transparent
+//               color="lightgrey"
+//               opacity={0.5}
+//               side={THREE.DoubleSide}
+//               wireframe
+//               wireframeLinewidth={2}
+//             />
+//           </mesh>
+//         )}
+//         <OrbitControls />
+//       </Canvas>
+//       <button
+//         style={{
+//           position: "absolute",
+//           top: 10,
+//           right: 10,
+//           zIndex: 1,
+//           width: "6rem",
+//         }}
+//         onClick={togglePlane}
+//       >
+//         {planeVisible ? "Hide Plane" : "Show Plane"}
+//       </button>
+//     </div>
+//   );
+// }
+
 import * as THREE from "three";
+import React, { useState, useEffect, useRef } from "react";
+import { Canvas } from "react-three-fiber";
+import { OrbitControls } from "@react-three/drei";
+import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader";
 
 function App() {
   const groupRef = useRef();
   const slicerRef = useRef();
   const [planeVisible, setPlaneVisible] = useState(true);
+  const [showUpperHalf, setShowUpperHalf] = useState(false);
 
   useEffect(() => {
     const loader = new OBJLoader();
     loader.load(
-      "http://192.168.15.170:9006/ftp/report_id--170--newfile.obj",
+      "http://localhost:9006/ftp/report_id--170--newfile.obj",
       (obj) => {
         obj.traverse((child) => {
           if (child.isMesh) {
-            child.material = new MeshNormalMaterial(); // Assign a material to the mesh
+            child.material = new THREE.MeshNormalMaterial();
           }
         });
 
-        const bbox = new Box3().setFromObject(obj);
-        const center = bbox.getCenter(new Vector3());
-        obj.position.sub(center); // center the model
+        const bbox = new THREE.Box3().setFromObject(obj);
+        const center = bbox.getCenter(new THREE.Vector3());
+        obj.position.sub(center);
 
         groupRef.current.add(obj);
         groupRef.current.scale.set(10, 10, 10);
 
-        // Set the position of the slicer
         slicerRef.current.position.x = bbox.max.x;
 
-        // Create a clipping plane
-        const clipPlane = new Plane(new Vector3(1, 0, 0), 0);
+        const clipPlane = new THREE.Plane(new THREE.Vector3(1, 0, 0), 0);
         const clipPlanes = [clipPlane];
 
-        // Apply the clipping plane to the material of the object
         obj.traverse((child) => {
           if (child.isMesh) {
             child.material.clipping = true;
@@ -268,6 +362,10 @@ function App() {
 
   const togglePlane = () => {
     setPlaneVisible(!planeVisible);
+  };
+
+  const handleSlicerClick = () => {
+    setShowUpperHalf(!showUpperHalf);
   };
 
   return (
@@ -284,13 +382,23 @@ function App() {
       >
         <group ref={groupRef} />
         {planeVisible && (
-          <mesh ref={slicerRef}>
+          <mesh
+            ref={slicerRef}
+            onClick={handleSlicerClick}
+            onPointerOver={() => setShowUpperHalf(true)}
+            onPointerOut={() => setShowUpperHalf(false)}
+          >
             <planeBufferGeometry args={[5, 5]} />
             <meshBasicMaterial
               transparent
               color="lightgrey"
               opacity={0.5}
               side={THREE.DoubleSide}
+              clipIntersection={showUpperHalf}
+              clipShadows={true}
+              clipPlanes={[
+                new THREE.Plane(new THREE.Vector3(0, -1, 0), 0),
+              ]}
               wireframe
               wireframeLinewidth={2}
             />
@@ -315,3 +423,4 @@ function App() {
 }
 
 export default App;
+
